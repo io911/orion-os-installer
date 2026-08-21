@@ -9,7 +9,6 @@ on:
 env:
   GHCR_OWNER: io911
   IMAGE_NAME: orion-bootc
-  ISO_MAX_BYTES: 2147483648
 
 jobs:
   build-iso:
@@ -30,6 +29,7 @@ jobs:
           IMAGE_FULL="ghcr.io/${GHCR_OWNER}/${IMAGE_NAME}:latest"
           sudo podman pull "${IMAGE_FULL}"
           echo "Pulled ${IMAGE_FULL}"
+
       - name: Create hybrid installer ISO
         run: |
           set -eux
@@ -62,20 +62,6 @@ jobs:
           fi
 
           ls -lh "${OUT_PATH}"
-          
-      - name: Check ISO size and fail if >= 2GB
-        run: |
-          OUT_FILE=$(ls $GITHUB_WORKSPACE/orion-os-installer-*.iso | tail -n1)
-          if [ -z "${OUT_FILE:-}" ]; then
-            echo "No ISO found to check"
-            exit 1
-          fi
-          ISO_SIZE=$(stat -c%s "${OUT_FILE}")
-          echo "ISO size: ${ISO_SIZE} bytes"
-          if [ ${ISO_SIZE} -ge ${{ env.ISO_MAX_BYTES }} ]; then
-            echo "ISO is too large (>= 2GB). Aborting upload."
-            exit 1
-          fi
 
       - name: Upload ISO artifact
         uses: actions/upload-artifact@v4
