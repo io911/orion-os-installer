@@ -7,7 +7,7 @@ on:
       - main
 
 env:
-  GHCR_OWNER: io911
+  GHCR_OWNER: io911   # <-- set this to your GHCR owner/org (e.g. io911)
   IMAGE_NAME: orion-bootc
   ISO_MAX_BYTES: 2147483648
 
@@ -39,16 +39,17 @@ jobs:
           OUT_PATH="$GITHUB_WORKSPACE/orion-os-installer-${DATE_SUFFIX}.iso"
           mkdir -p "$(dirname "${OUT_PATH}")"
 
-          # Mount /var/lib/containers/storage so bootc-image-builder can read the pulled container
+          # Pass --rootfs ext4 to specify the target filesystem layout
           sudo podman run --rm --privileged \
             -v /var/lib/containers/storage:/var/lib/containers/storage \
             -v "$GITHUB_WORKSPACE":/output \
             quay.io/centos-bootc/bootc-image-builder:latest \
             --type iso \
+            --rootfs xfs \
             --output /output \
             "${IMAGE_FULL}"
 
-          # Handle the output directory/file structure bootc-image-builder generates
+          # Handle directory/file output from bootc-image-builder
           if [ -f "$GITHUB_WORKSPACE/iso/installer.iso" ]; then
             mv "$GITHUB_WORKSPACE/iso/installer.iso" "${OUT_PATH}"
           elif [ -f "$GITHUB_WORKSPACE/bootc.iso" ]; then
