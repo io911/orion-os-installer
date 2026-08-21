@@ -1,0 +1,68 @@
+name: Build Orion OS Installer ISO
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+env:
+  IMAGE_NAME: orion-bootc
+  REGISTRY: ghcr.io/${{ github.repository_owner }}
+  BASE_IMAGE: quay.io/fedora/fedora-bootc:44
+  ISO_MAX_BYTES: 2147483648
+
+jobs:
+  build-iso:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Build local bootc container image
+        run: |
+          IMAGE_LOWER=$(echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
+          # Build an image tag we can reference locally
+          sudo podman build --format=docker -t ${IMAGE_LOWER}:iso -f Containerfile .
+
+      - name: Create hybrid installer ISO (written beside Containerfile)
+        run: |
+          set -eux
+          IMAGE_LOWER=$(echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
+          # Compact date suffix: YYMMDD (e.g. 260822 for 2026-08-22)
+          DATE_SUFFIX=$(date -u +"%y%m%d")
+          OUT_PATH="$GITHUB_WORKSPACE/orion-os-installer-${DATE_SUFFIX}.iso"
+          mkdir -p "$(dirname "${OUT_PATH}")"
+
+          # Run the Fedora bootc base image which provides bootc-base-imagectl
+          sudo podman run --rm --privileged \
+            -v /var/lib/containers:/var/lib/containers \
+            -v "$GITHUB_WORKSPACE":/output \
+            ${{ env.BASE_IMAGE }} \
+            /usr/libexec/bootc-base-imagectl create-installer-iso --image ${IMAGE_LOWER}:iso --output /output/orion-os-installer-${DATE_SUFFIX}.iso
+
+          ls -lh "${OUT_PATH}"
+
+      - name: Check ISO size and fail if >= 2GB
+        run: |
+          OUT_FILE=$(ls $GITHUB_WORKSPACE/orion-os-installer-*.iso | tail -n1)
+          if [ -z "${OUT_FILE:-}" ]; then
+            echo "No ISO found to check"
+            exit 1
+          fi
+          ISO_SIZE=$(stat -c%s "${OUT_FILE}")
+          echo "ISO size: ${ISO_SIZE} bytes"
+          if [ ${ISO_SIZE} -ge ${{ env.ISO_MAX_BYTES }} ]; then
+            echo "ISO is too large (>= 2GB). Aborting upload."
+            exit 1
+          fi
+
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: orion-os-installer-iso
+          path: $GITHUB_WORKSPACE/orion-os-installer-*.iso
