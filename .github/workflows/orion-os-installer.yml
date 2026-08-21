@@ -65,12 +65,10 @@ jobs:
 
           ls -lh "${OUT_PATH}"
 
-      # Direct upload to GitHub Releases
-      - name: Create GitHub Release and Upload ISO
-        uses: softprops/action-gh-release@v3
+    # Upload ISO as a Actions Artifact (Supports up to 5 GB)
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: "v1.0.${{ github.run_number }}"
-          name: "Orion OS Installer (Build ${{ github.run_number }})"
-          files: orion-os-installer-*.iso
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: orion-os-installer-iso
+          path: orion-os-installer-*.iso
+          if-no-files-found: error
