@@ -14,12 +14,12 @@ jobs:
   build-iso:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Log in to GitHub Container Registry (if needed) and pull orion-bootc image
         run: |
@@ -67,4 +67,15 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: orion-os-installer-iso
-          path: $GITHUB_WORKSPACE/orion-os-installer-*.iso
+          path: orion-os-installer-*.iso
+          if-no-files-found: error
+
+      - name: Create GitHub Release and Upload ISO
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: "v1.0.${{ github.run_number }}"
+          name: "Orion OS Installer (Build ${{ github.run_number }})"
+          files: orion-os-installer-*.iso
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
