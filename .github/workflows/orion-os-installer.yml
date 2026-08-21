@@ -35,30 +35,29 @@ jobs:
         run: |
           set -eux
           IMAGE_FULL="ghcr.io/${GHCR_OWNER}/${IMAGE_NAME}:latest"
-          # Compact date suffix: YYMMDD (e.g. 260821)
           DATE_SUFFIX=$(date -u +"%y%m%d")
           OUT_PATH="$GITHUB_WORKSPACE/orion-os-installer-${DATE_SUFFIX}.iso"
           mkdir -p "$(dirname "${OUT_PATH}")"
 
-          # Use official bootc-image-builder container to generate the installer ISO
+          # Run bootc-image-builder passing the target image argument before flags
           sudo podman run --rm --privileged \
             -v /var/lib/containers:/var/lib/containers \
             -v "$GITHUB_WORKSPACE":/output \
             quay.io/centos-bootc/bootc-image-builder:latest \
             generate \
             --type iso \
-            --output /output \
-            "${IMAGE_FULL}"
+            "${IMAGE_FULL}" \
+            --output /output
 
-          # Rename the default bootc-image-builder ISO output to your target filename format
-          if [ -f "$GITHUB_WORKSPACE/bootc.iso" ]; then
-            mv "$GITHUB_WORKSPACE/bootc.iso" "${OUT_PATH}"
-          elif [ -f "$GITHUB_WORKSPACE/iso/installer.iso" ]; then
+          # Rename default output file if needed
+          if [ -f "$GITHUB_WORKSPACE/iso/installer.iso" ]; then
             mv "$GITHUB_WORKSPACE/iso/installer.iso" "${OUT_PATH}"
+          elif [ -f "$GITHUB_WORKSPACE/bootc.iso" ]; then
+            mv "$GITHUB_WORKSPACE/bootc.iso" "${OUT_PATH}"
           fi
 
           ls -lh "${OUT_PATH}"
-
+          
       - name: Check ISO size and fail if >= 2GB
         run: |
           OUT_FILE=$(ls $GITHUB_WORKSPACE/orion-os-installer-*.iso | tail -n1)
