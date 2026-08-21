@@ -7,9 +7,8 @@ on:
       - main
 
 env:
+  GHCR_OWNER: io911   # <-- set this to your GHCR owner/org (e.g. io911)
   IMAGE_NAME: orion-bootc
-  REGISTRY: ghcr.io/${{ github.repository_owner }}
-  BASE_IMAGE: quay.io/fedora/fedora-bootc:44
   ISO_MAX_BYTES: 2147483648
 
 jobs:
@@ -23,27 +22,30 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      - name: Build local bootc container image
-        run: |
-          IMAGE_LOWER=$(echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
-          # Build an image tag we can reference locally
-          sudo podman build --format=docker -t ${IMAGE_LOWER}:iso -f Containerfile .
-
-      - name: Create hybrid installer ISO (written beside Containerfile)
+      - name: Log in to GitHub Container Registry (if needed) and pull orion-bootc image
         run: |
           set -eux
-          IMAGE_LOWER=$(echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
+          # Login so podman can pull private GHCR images; ignore failure if login isn't needed.
+          echo "${{ secrets.GITHUB_TOKEN }}" | sudo podman login ghcr.io -u "${{ github.actor }}" --password-stdin || true
+          IMAGE_FULL="ghcr.io/${GHCR_OWNER}/${IMAGE_NAME}:latest"
+          sudo podman pull "${IMAGE_FULL}"
+          echo "Pulled ${IMAGE_FULL}"
+
+      - name: Create hybrid installer ISO
+        run: |
+          set -eux
+          IMAGE_FULL="ghcr.io/${GHCR_OWNER}/${IMAGE_NAME}:latest"
           # Compact date suffix: YYMMDD (e.g. 260822 for 2026-08-22)
           DATE_SUFFIX=$(date -u +"%y%m%d")
           OUT_PATH="$GITHUB_WORKSPACE/orion-os-installer-${DATE_SUFFIX}.iso"
           mkdir -p "$(dirname "${OUT_PATH}")"
 
-          # Run the Fedora bootc base image which provides bootc-base-imagectl
+          # Run the orion-bootc image (it must provide /usr/libexec/bootc-base-imagectl)
           sudo podman run --rm --privileged \
             -v /var/lib/containers:/var/lib/containers \
             -v "$GITHUB_WORKSPACE":/output \
-            ${{ env.BASE_IMAGE }} \
-            /usr/libexec/bootc-base-imagectl create-installer-iso --image ${IMAGE_LOWER}:iso --output /output/orion-os-installer-${DATE_SUFFIX}.iso
+            "ghcr.io/${GHCR_OWNER}/${IMAGE_NAME}:latest" \
+            /usr/libexec/bootc-base-imagectl create-installer-iso --image "${IMAGE_FULL}" --output /output/orion-os-installer-${DATE_SUFFIX}.iso
 
           ls -lh "${OUT_PATH}"
 
