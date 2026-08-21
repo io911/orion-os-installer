@@ -7,7 +7,7 @@ on:
       - main
 
 env:
-  GHCR_OWNER: io911   # <-- set this to your GHCR owner/org (e.g. io911)
+  GHCR_OWNER: io911
   IMAGE_NAME: orion-bootc
   ISO_MAX_BYTES: 2147483648
 
@@ -35,17 +35,27 @@ jobs:
         run: |
           set -eux
           IMAGE_FULL="ghcr.io/${GHCR_OWNER}/${IMAGE_NAME}:latest"
-          # Compact date suffix: YYMMDD (e.g. 260822 for 2026-08-22)
+          # Compact date suffix: YYMMDD (e.g. 260821)
           DATE_SUFFIX=$(date -u +"%y%m%d")
           OUT_PATH="$GITHUB_WORKSPACE/orion-os-installer-${DATE_SUFFIX}.iso"
           mkdir -p "$(dirname "${OUT_PATH}")"
 
-          # Run the orion-bootc image (it must provide /usr/libexec/bootc-base-imagectl)
+          # Use official bootc-image-builder container to generate the installer ISO
           sudo podman run --rm --privileged \
             -v /var/lib/containers:/var/lib/containers \
             -v "$GITHUB_WORKSPACE":/output \
-            "ghcr.io/${GHCR_OWNER}/${IMAGE_NAME}:latest" \
-            /usr/libexec/bootc-base-imagectl create-installer-iso --image "${IMAGE_FULL}" --output /output/orion-os-installer-${DATE_SUFFIX}.iso
+            quay.io/centos-bootc/bootc-image-builder:latest \
+            generate \
+            --type iso \
+            --output /output \
+            "${IMAGE_FULL}"
+
+          # Rename the default bootc-image-builder ISO output to your target filename format
+          if [ -f "$GITHUB_WORKSPACE/bootc.iso" ]; then
+            mv "$GITHUB_WORKSPACE/bootc.iso" "${OUT_PATH}"
+          elif [ -f "$GITHUB_WORKSPACE/iso/installer.iso" ]; then
+            mv "$GITHUB_WORKSPACE/iso/installer.iso" "${OUT_PATH}"
+          fi
 
           ls -lh "${OUT_PATH}"
 
