@@ -39,25 +39,28 @@ jobs:
           OUT_PATH="$GITHUB_WORKSPACE/orion-os-installer-${DATE_SUFFIX}.iso"
           mkdir -p "$(dirname "${OUT_PATH}")"
 
-          # Pass --rootfs ext4 to specify the target filesystem layout
+          # Build ISO using bootc-image-builder
           sudo podman run --rm --privileged \
             -v /var/lib/containers/storage:/var/lib/containers/storage \
             -v "$GITHUB_WORKSPACE":/output \
             quay.io/centos-bootc/bootc-image-builder:latest \
             --type iso \
-            --rootfs xfs \
+            --rootfs ext4 \
             --output /output \
             "${IMAGE_FULL}"
 
-          # Handle directory/file output from bootc-image-builder
-          if [ -f "$GITHUB_WORKSPACE/iso/installer.iso" ]; then
-            mv "$GITHUB_WORKSPACE/iso/installer.iso" "${OUT_PATH}"
-          elif [ -f "$GITHUB_WORKSPACE/bootc.iso" ]; then
-            mv "$GITHUB_WORKSPACE/bootc.iso" "${OUT_PATH}"
+          # Locate the generated ISO (bootc-image-builder outputs install.iso in subfolders)
+          GENERATED_ISO=$(find "$GITHUB_WORKSPACE" -maxdepth 3 -name "*.iso" ! -name "orion-os-installer-*.iso" | head -n 1)
+
+          if [ -n "${GENERATED_ISO}" ]; then
+            mv "${GENERATED_ISO}" "${OUT_PATH}"
+          else
+            echo "Error: Could not locate generated ISO file."
+            exit 1
           fi
 
           ls -lh "${OUT_PATH}"
-
+          
       - name: Check ISO size and fail if >= 2GB
         run: |
           OUT_FILE=$(ls $GITHUB_WORKSPACE/orion-os-installer-*.iso | tail -n1)
