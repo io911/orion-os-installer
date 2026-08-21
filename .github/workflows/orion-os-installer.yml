@@ -35,21 +35,20 @@ jobs:
         run: |
           set -eux
           IMAGE_FULL="ghcr.io/${GHCR_OWNER}/${IMAGE_NAME}:latest"
-          # Compact date suffix: YYMMDD (e.g. 260821)
           DATE_SUFFIX=$(date -u +"%y%m%d")
           OUT_PATH="$GITHUB_WORKSPACE/orion-os-installer-${DATE_SUFFIX}.iso"
           mkdir -p "$(dirname "${OUT_PATH}")"
 
-          # All flags MUST precede the image argument
+          # Mount /var/lib/containers/storage so bootc-image-builder can read the pulled container
           sudo podman run --rm --privileged \
-            -v /var/lib/containers:/var/lib/containers \
+            -v /var/lib/containers/storage:/var/lib/containers/storage \
             -v "$GITHUB_WORKSPACE":/output \
             quay.io/centos-bootc/bootc-image-builder:latest \
             --type iso \
             --output /output \
             "${IMAGE_FULL}"
 
-          # Handle directory or direct ISO output from bootc-image-builder
+          # Handle the output directory/file structure bootc-image-builder generates
           if [ -f "$GITHUB_WORKSPACE/iso/installer.iso" ]; then
             mv "$GITHUB_WORKSPACE/iso/installer.iso" "${OUT_PATH}"
           elif [ -f "$GITHUB_WORKSPACE/bootc.iso" ]; then
