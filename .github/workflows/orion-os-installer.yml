@@ -7,7 +7,7 @@ on:
       - main
 
 env:
-  GHCR_OWNER: io911   # <-- set this to your GHCR owner/org (e.g. io911)
+  GHCR_OWNER: io911
   IMAGE_NAME: orion-bootc
   ISO_MAX_BYTES: 2147483648
 
@@ -30,7 +30,6 @@ jobs:
           IMAGE_FULL="ghcr.io/${GHCR_OWNER}/${IMAGE_NAME}:latest"
           sudo podman pull "${IMAGE_FULL}"
           echo "Pulled ${IMAGE_FULL}"
-
       - name: Create hybrid installer ISO
         run: |
           set -eux
@@ -49,7 +48,10 @@ jobs:
             --output /output \
             "${IMAGE_FULL}"
 
-          # Locate the generated ISO (bootc-image-builder outputs install.iso in subfolders)
+          # Fix file ownership for files created by the root container process
+          sudo chown -R $(id -u):$(id -g) "$GITHUB_WORKSPACE"
+
+          # Locate and move the generated ISO
           GENERATED_ISO=$(find "$GITHUB_WORKSPACE" -maxdepth 3 -name "*.iso" ! -name "orion-os-installer-*.iso" | head -n 1)
 
           if [ -n "${GENERATED_ISO}" ]; then
