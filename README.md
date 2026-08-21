@@ -1,6 +1,6 @@
 # Orion OS Installer
 
-This directory contains scripts and instructions to build a hybrid live+installer ISO for Orion OS.
+This directory contains script and instructions to build a hybrid live+installer ISO for Orion OS.
 
 The ISO produced by the workflow includes the exact filesystem and packages configured by the repository Containerfile and build.yml (it builds the same container image and produces an installer ISO from it).
 
