@@ -10,6 +10,6 @@ Files:
 
 Notes:
 - Installer is interactive: users set their own username/password and partitioning during installation.
-- The ISO will be written to the repository root (the same directory as the Containerfile) and named orion-os-installer-<date>.iso where <date> is a compact YYMMDD format (e.g. 260822 for 2026-08-22). The build will overwrite an existing file with the same name if it already exists that day.
+- The ISO will be written to the repository root and named orion-os-installer-<date>.iso where <date> is a compact YYMMDD format (e.g. 260822 for 2026-08-22). The build will overwrite an existing file with the same name if it already exists that day.
 
 See .github/workflows/orion-os-installer.yml for the CI workflow that builds and uploads the ISO as a workflow artifact.
