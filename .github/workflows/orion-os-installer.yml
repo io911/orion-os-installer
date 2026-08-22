@@ -21,7 +21,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Log in to GitHub Container Registry (if needed) and pull orion-bootc image
         run: |
@@ -67,7 +67,7 @@ jobs:
 
     # Upload ISO as a Actions Artifact (Supports up to 5 GB)
       - name: Upload ISO artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: orion-os-installer-iso
           path: orion-os-installer-*.iso
